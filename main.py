@@ -1,5 +1,5 @@
 import pygame
-import cv2
+import skimage
 import math
 
 pygame.init()
@@ -11,25 +11,12 @@ clock = pygame.time.Clock()
 
 SCALE = 5
 
-# Define key mappings
+# Key mappings
 DIRECTION_KEYS = {
     pygame.K_q: -1,
     pygame.K_w: 0,
     pygame.K_e: 1,
 }
-
-# JUMP_POWER_KEYS = {
-#     pygame.K_1: 0.7,
-#     pygame.K_2: 1.4,
-#     pygame.K_3: 2.1,
-#     pygame.K_4: 2.8,
-#     pygame.K_5: 3.5,
-#     pygame.K_6: 4.2,
-#     pygame.K_7: 4.9,
-#     pygame.K_8: 5.6,
-#     pygame.K_9: 6.3,
-#     pygame.K_0: 7,
-# }
 
 JUMP_POWER_KEYS = {
     pygame.K_1: 0.65,
@@ -46,7 +33,7 @@ JUMP_POWER_KEYS = {
 
 JUMP_KEY = pygame.K_SPACE
 
-# player params
+# Player params
 PLAYER_SIZE = (2, 3)
 X_SPEED = 2
 MAX_FALL_SPEED = 6
@@ -57,13 +44,12 @@ BLACK = (0, 0, 0)
 GRAY = (100, 100, 100)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
+TEAL = (0, 255, 255)
+RED = (255, 0, 0)
 
 FPS = 60
 
 
-# def get_decimal(num):
-#     _, decimal_part = math.modf(num)
-#     if decimal_part
 def col_round(x):
     frac = x - math.floor(x)
     if frac < 0.5:
@@ -71,8 +57,35 @@ def col_round(x):
     return math.ceil(x)
 
 
+class FitnessRectangle(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((SCALE, SCALE))
+        self.image.fill(TEAL)
+        self.rectangle = pygame.Rect(0, 0, 0, 0)
+        self.rectangle.topleft = (0, 0)
+
+        self.points = []
+
+    def add_point(self, point):
+        self.points.append(point)
+
+    def create_rectangle(self):
+        if len(self.points) == 0:
+            return
+        min_x = min(self.points, key=lambda x: x[0])[0]
+        max_x = max(self.points, key=lambda x: x[0])[0]
+        min_y = min(self.points, key=lambda x: x[1])[1]
+        max_y = max(self.points, key=lambda x: x[1])[1]
+        self.rectangle = pygame.Rect(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
+        self.rectangle.topleft = (min_x, min_y)
+
+    def update(self):
+        pass
+
+
 class Player(pygame.sprite.Sprite):
-    def __init__(self, starting_pos, walls):
+    def __init__(self, starting_pos, walls, fitness_walls):
         super().__init__()
         self.image = pygame.Surface((PLAYER_SIZE[0], PLAYER_SIZE[1]))
         self.image.fill(GREEN)
@@ -88,10 +101,11 @@ class Player(pygame.sprite.Sprite):
         self.direction = 0
         self.jumping = False
 
-        # TODO: check if standing on ground
         self.on_ground = False
 
         self.walls = walls
+        self.fitness_walls = fitness_walls
+        self.fitness_score = 0
 
     def handle_key_presses(self):
         keys = pygame.key.get_pressed()
@@ -131,14 +145,9 @@ class Player(pygame.sprite.Sprite):
             self.collide(self.x_speed, 0)
             self.x_delay_counter = 0
 
-        # temp_y = self.rectangle.y
-        # self.rectangle.y += self.y_speed
-        # print(f"speed: {self.y_speed}, change: {self.rectangle.y - temp_y}")
-        # self.collide(0, self.y_speed)
         for _ in range(int(abs(col_round(self.y_speed)))):
             if self.on_ground:
                 break
-            print(int(col_round(self.y_speed)))
             y_change = 1 if self.y_speed > 0 else -1
             self.rectangle.y += y_change
             self.collide(0, y_change)
@@ -148,10 +157,10 @@ class Player(pygame.sprite.Sprite):
             if self.rectangle.colliderect(wall):
                 if x_vel > 0:  # Moving right, bounce left
                     self.rectangle.right = wall.left
-                    self.x_speed = -self.x_speed / 1.2
+                    self.x_speed = -X_SPEED
                 if x_vel < 0:  # Moving left, bounce right
                     self.rectangle.left = wall.right
-                    self.x_speed = -self.x_speed / 1.2
+                    self.x_speed = X_SPEED
                 if y_vel > 0:  # Moving down, stop the movement, set the onground
                     self.rectangle.bottom = wall.top
                     self.y_speed = 0
@@ -160,25 +169,45 @@ class Player(pygame.sprite.Sprite):
                 if y_vel < 0:  # Moving up, hit the ceiling
                     self.rectangle.top = wall.bottom
                     self.y_speed = 0
+        for wall in self.fitness_walls:
+            if self.rectangle.colliderect(wall.rectangle):
+                self.fitness_score += 1
+                self.fitness_walls.remove(wall)
+                break
 
     def update(self):
         # print(f"onground: {self.on_ground}, ")
         # print(f"Position: {self.rectangle.topleft}")
         # print(f"Speed: {self.x_speed, self.y_speed}")
-        print(f"Jump power: {self.jump_power}")
+        # print(f"Jump power: {self.jump_power}")
         # print(f"Direction: {self.direction}")
+        # print(f"Fitness score: {self.fitness_score}")
         self.handle_key_presses()
         self.apply_gravity()
         self.move()
 
 
+def check_neighbours(pixel_cords, neighbour_list):
+    for neighbour in neighbour_list:
+        if pixel_cords[0] == neighbour[0] and pixel_cords[1] == (neighbour[1] + 1):
+            return True
+        if pixel_cords[0] == neighbour[0] and pixel_cords[1] == (neighbour[1] - 1):
+            return True
+        if pixel_cords[0] == (neighbour[0] + 1) and pixel_cords[1] == neighbour[1]:
+            return True
+        if pixel_cords[0] == (neighbour[0] - 1) and pixel_cords[1] == neighbour[1]:
+            return True
+    return False
+
+
 def extract_map(image_path):
     wall_rects = []
+    fitness_rectangles = []
     player_spawn = None
-    image = cv2.imread(image_path)
+    image = skimage.io.imread(image_path)
     for y in range(len(image)):
         for x in range(len(image[y])):
-            pixel = image[y][x]
+            pixel = image[y][x][:3]
             # Parse walls
             if all(pixel == BLACK):
                 # cv2 uses y,x but pygame uses x,y
@@ -187,18 +216,39 @@ def extract_map(image_path):
             # Parse player
             elif all(pixel == GREEN) and player_spawn is None:
                 player_spawn = [x, y]
+            # Parse fitness points
+            elif all(pixel == TEAL):
+                found = False
+                for rectangle in fitness_rectangles:
+                    if check_neighbours((x, y), rectangle.points):
+                        rectangle.add_point((x, y))
+                        found = True
+                        break
+                if not found:
+                    new_rect = FitnessRectangle()
+                    new_rect.add_point((x, y))
+                    fitness_rectangles.append(new_rect)
+    for rectangle in fitness_rectangles:
+        rectangle.create_rectangle()
     if player_spawn is None:
         raise Exception("Player not declared in the map")
-    return wall_rects, player_spawn
+    return wall_rects, fitness_rectangles, player_spawn
 
 
-def draw_walls(walls):
+def draw_walls(walls, color):
     for wall in walls:
-        pygame.draw.rect(
-            screen,
-            BLACK,
-            (wall[0] * SCALE, wall[1] * SCALE, SCALE, SCALE),
-        )
+        if wall.width == 1 and wall.height == 1:
+            pygame.draw.rect(
+                screen,
+                color,
+                (wall[0] * SCALE, wall[1] * SCALE, SCALE, SCALE),
+            )
+        else:
+            pygame.draw.rect(
+                screen,
+                color,
+                (wall[0] * SCALE, wall[1] * SCALE, wall[2] * SCALE, wall[3] * SCALE),
+            )
 
 
 def draw_player(player_group):
@@ -217,17 +267,18 @@ def draw_player(player_group):
         )
 
 
-def draw_window(walls, player_group):
+def draw_window(walls, fitness_rectangles, player_group):
     screen.fill(GRAY)
-    draw_walls(walls)
+    draw_walls(walls, BLACK)
+    draw_walls([rectangle.rectangle for rectangle in fitness_rectangles], TEAL)
     draw_player(player_group)
     pygame.display.update()
 
 
 def main():
-    walls, player_location = extract_map("map.png")
+    walls, fitness_rectangles, player_location = extract_map("map.png")
     run = True
-    player = Player(player_location, walls)
+    player = Player(player_location, walls, fitness_rectangles)
     player_group = pygame.sprite.Group()
     player_group.add(player)
 
@@ -239,7 +290,7 @@ def main():
                 run = False
         player_group.update()
 
-        draw_window(walls, player_group)
+        draw_window(walls, fitness_rectangles, player_group)
     pygame.quit()
 
 
