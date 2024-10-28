@@ -90,6 +90,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.image = pygame.Surface((PLAYER_SIZE[0], PLAYER_SIZE[1]))
         self.image.fill(GREEN)
+        self.turn = 150
 
         # TEMP:
         self.starting_pos = starting_pos
@@ -107,11 +108,13 @@ class Player(pygame.sprite.Sprite):
         self.jumping = False
 
         self.on_ground = False
+        self.restarting = False
 
         self.walls = walls
         self.killing_walls = killing_walls
         self.platforms = platforms
-        self.fitness_walls = fitness_walls
+        self.original_fitness_walls = fitness_walls
+        self.fitness_walls = fitness_walls.copy()
         self.fitness_score = 0
 
     def handle_key_presses(self):
@@ -151,26 +154,39 @@ class Player(pygame.sprite.Sprite):
         else:
             self.rectangle.x += self.x_speed
             self.collide(self.x_speed, 0)
+            if self.restarting:
+                return
             self.x_delay_counter = 0
 
         for _ in range(int(abs(col_round(self.y_speed)))):
+            if self.restarting:
+                return
             if self.on_ground:
                 break
             y_change = 1 if self.y_speed > 0 else -1
             self.rectangle.y += y_change
             self.collide(0, y_change)
 
+    def restart(self):
+        print("KILLED!")
+        print(f"Score: {self.fitness_score}")
+        self.rectangle.topleft = self.starting_pos
+        self.x_speed = 0
+        self.y_speed = 0
+        self.jump_power = 1
+        self.direction = 0
+        self.jumping = False
+        self.on_ground = False
+        self.restarting = False
+        self.fitness_score = 0
+        self.fitness_walls = self.original_fitness_walls.copy()
+        self.turn = 150
+
     def collide(self, x_vel, y_vel):
         for wall in self.killing_walls:
             if self.rectangle.colliderect(wall):
-                print("KILLED!")
-                print(f"Score: {self.fitness_score}")
-                self.rectangle.topleft = self.starting_pos
-                self.x_speed = 0
-                self.y_speed = 0
-                # global run
-                # run = False
-                break
+                self.restarting = True
+                return
         for wall in self.walls:
             if self.rectangle.colliderect(wall):
                 if x_vel > 0:  # Moving right, bounce left
@@ -197,7 +213,7 @@ class Player(pygame.sprite.Sprite):
                     self.x_delay_counter = 0
         for wall in self.fitness_walls:
             if self.rectangle.colliderect(wall.rectangle):
-                self.fitness_score += 1
+                self.fitness_score += self.turn
                 self.fitness_walls.remove(wall)
                 break
 
@@ -325,6 +341,9 @@ def main():
             if event.type == pygame.QUIT:
                 run = False
         player.update()
+
+        if player.restarting:
+            player.restart()
 
         draw_window(player)
     pygame.quit()
