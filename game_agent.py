@@ -327,7 +327,8 @@ run = True
 
 
 def main():
-    agents_filename = "agents_best.txt"
+    # agents_filename = "agents_best.txt"
+    agents_filename = None
     fitness_filename = "fitness.txt"
     agents = populate(agents_filename)
     player = extract_map("map.png")
