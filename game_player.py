@@ -331,7 +331,7 @@ run = True
 
 
 def main():
-    player = extract_map("map.png")
+    player = extract_map("map2.png")
     global run
 
     while run:

@@ -298,7 +298,7 @@ def draw_window(player):
     screen.fill(GRAY)
     draw_walls(player.walls, BLACK)
     draw_walls(player.killing_walls, RED)
-    draw_walls([rectangle.rectangle for rectangle in player.fitness_walls], TEAL)
+    # draw_walls([rectangle.rectangle for rectangle in player.fitness_walls], TEAL)
     draw_walls(player.platforms, BROWN)
     draw_player(player)
     pygame.display.update()
@@ -327,9 +327,9 @@ run = True
 
 
 def main():
-    # agents_filename = "agents_best.txt"
     agents_filename = None
-    fitness_filename = "fitness.txt"
+    fitness_filename = None
+    # agents_filename, fitness_filename = "agents_best.txt", "fitness_best.txt"
     agents = populate(agents_filename)
     player = extract_map("map.png")
 
