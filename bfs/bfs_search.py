@@ -460,7 +460,7 @@ def bfs_optimal_path(player):
             break  # Exit if the window is closed
 
         # Calculate minimum score threshold based on path length
-        threshold_score = 120 * path_length
+        threshold_score = get_threshold_score(path_length)
         if SCORE >= threshold_score:
             # Only keep paths that meet the threshold score
             if SCORE > best_score:
@@ -478,6 +478,10 @@ def bfs_optimal_path(player):
     print(f"Best Score: {best_score}")
     return best_path
 
+def get_threshold_score(path_length):
+    # Threshold score is the minimum score needed to reach the goal
+     # 150 * path_length - 1 - 2 - 3 - ... - path_length
+    return 150 * path_length - sum(range(1, path_length + 1))
 # Initialize and run the game
 def main():
     player = extract_map("map.png")  # Assuming extract_map and other functions are already implemented
