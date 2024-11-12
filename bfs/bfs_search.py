@@ -52,6 +52,7 @@ BROWN = (139, 69, 19)
 
 FPS = 1000
 SCORE = -1
+KILLED = False
 
 def col_round(x):
     frac = x - math.floor(x)
@@ -180,9 +181,12 @@ class Player(pygame.sprite.Sprite):
 
     def restart(self):
         global SCORE
-        print("KILLED!")
+        print("End of moves")
         print(f"Score: {self.fitness_score}")
-        SCORE = self.fitness_score
+        if KILLED:
+            SCORE = 0
+        else:
+            SCORE = self.fitness_score
         self.rectangle.topleft = self.starting_pos
         self.x_speed = 0
         self.y_speed = 0
@@ -197,8 +201,10 @@ class Player(pygame.sprite.Sprite):
         self.move_index = 0  # Reset to start of moves
 
     def collide(self, x_vel, y_vel):
+        global KILLED
         for wall in self.killing_walls:
             if self.rectangle.colliderect(wall):
+                KILLED = True
                 self.restarting = True
                 return
         for wall in self.walls:
@@ -343,69 +349,6 @@ def draw_window(player):
 
 run = True
 
-# POSSIBLE_MOVES = [
-#     (-1, 0.65), (0, 0.65), (1, 0.65),
-#     (-1, 0.85), (0, 0.85), (1, 0.85),
-#     (-1, 1.05), (0, 1.05), (1, 1.05),
-#     (-1, 1.25), (0, 1.25), (1, 1.25),
-#     (-1, 1.45), (0, 1.45), (1, 1.45),
-#     (-1, 1.65), (0, 1.65), (1, 1.65),
-#     (-1, 1.85), (0, 1.85), (1, 1.85),
-#     (-1, 2.05), (0, 2.05), (1, 2.05),
-#     (-1, 2.25), (0, 2.25), (1, 2.25),
-#     (-1, 2.45), (0, 2.45), (1, 2.45),
-# ]
-
-# def run_moves(player, moves):
-#     while run:
-#       clock.tick(FPS)
-#       player.moves = moves
-#       for event in pygame.event.get():
-#           pass
-      
-#       player.update()
-
-#       if player.restarting:
-#           player.restart()
-#           print(f"Score: {SCORE}")
-#           break
-#       draw_window(player)
-
-# def main():
-#     # Example move list: list of (direction, power) tuples
-
-#     # Pass the move list to the player
-#     player = extract_map("map.png")
-
-
-#     move_list_1 = [move for move in POSSIBLE_MOVES]
-#     move_list_1.append('restart')
-#     move_list_2 = [(0, 1.85), (0, 1.85), (0, 2.25), (0, 2.45), 'restart']
-#     move_list_3 = [(-1, 0.65), (1, 0.65), (-1, 0.65), (1, 0.65), 'restart']
-
-#     queue = []
-#     queue.append(move_list_1)
-#     queue.append(move_list_2)
-#     queue.append(move_list_3)
-
-#     print(queue)
-
-#     global run
-#     while run:
-#         clock.tick(FPS)
-#         if len(queue) == 0:
-#             run = False
-#             break
-#         move_list = queue.pop(0)
-#         run_moves(player, move_list)
-#         print('finished loop')
-
-#     pygame.quit()
-
-
-# if __name__ == "__main__":
-#     main()
-
 POSSIBLE_MOVES = [
     (-1, 0.65), (0, 0.65), (1, 0.65),
     (-1, 0.85), (0, 0.85), (1, 0.85),
@@ -421,7 +364,8 @@ POSSIBLE_MOVES = [
 
 # Define run_moves to run the provided moves and set SCORE after restart
 def run_moves(player, moves):
-    global SCORE
+    global SCORE, KILLED
+    KILLED = False
     while True:
         clock.tick(FPS)
         player.moves = moves
@@ -484,7 +428,7 @@ def get_threshold_score(path_length):
     return 150 * path_length - sum(range(1, path_length + 1))
 # Initialize and run the game
 def main():
-    player = extract_map("map.png")  # Assuming extract_map and other functions are already implemented
+    player = extract_map("map.png")  
 
     # Run BFS to find the optimal path
     best_path = bfs_optimal_path(player)
