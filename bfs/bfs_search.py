@@ -14,24 +14,9 @@ clock = pygame.time.Clock()
 SCALE = 5
 
 # Key mappings
-DIRECTION_KEYS = {
-    pygame.K_q: -1,
-    pygame.K_w: 0,
-    pygame.K_e: 1,
-}
+DIRECTION_KEYS = { pygame.K_q: -1, pygame.K_w: 0, pygame.K_e: 1,}
 
-JUMP_POWER_KEYS = {
-    pygame.K_1: 0.65,
-    pygame.K_2: 0.85,
-    pygame.K_3: 1.05,
-    pygame.K_4: 1.25,
-    pygame.K_5: 1.45,
-    pygame.K_6: 1.65,
-    pygame.K_7: 1.85,
-    pygame.K_8: 2.05,
-    pygame.K_9: 2.25,
-    pygame.K_0: 2.45,
-}
+JUMP_POWER_KEYS = {pygame.K_1: 0.65, pygame.K_2: 0.85, pygame.K_3: 1.05, pygame.K_4: 1.25, pygame.K_5: 1.45, pygame.K_6: 1.65, pygame.K_7: 1.85, pygame.K_8: 2.05, pygame.K_9: 2.25, pygame.K_0: 2.45,}
 
 JUMP_KEY = pygame.K_SPACE
 
@@ -50,9 +35,10 @@ TEAL = (0, 255, 255)
 RED = (255, 0, 0)
 BROWN = (139, 69, 19)
 
-FPS = 1000
+FPS = 1000000
 SCORE = -1
 KILLED = False
+POSITION = (0, 0)
 
 def col_round(x):
     frac = x - math.floor(x)
@@ -129,7 +115,7 @@ class Player(pygame.sprite.Sprite):
         if self.on_ground and self.move_index < len(self.moves):
             # Get the current move (direction, jump_power)
             move = self.moves[self.move_index]
-            print(f"Move: {move}")
+            # print(f"Move: {move}")
             if move == 'restart':
                 self.restarting = True
                 return self.fitness_score
@@ -180,13 +166,14 @@ class Player(pygame.sprite.Sprite):
             self.collide(0, y_change)
 
     def restart(self):
-        global SCORE
-        print("End of moves")
-        print(f"Score: {self.fitness_score}")
+        global SCORE, KILLED, POSITION
+        # print("End of moves")
+        # print(f"Score: {self.fitness_score}")
         if KILLED:
             SCORE = 0
         else:
             SCORE = self.fitness_score
+            POSITION = self.rectangle.topleft
         self.rectangle.topleft = self.starting_pos
         self.x_speed = 0
         self.y_speed = 0
@@ -364,7 +351,7 @@ POSSIBLE_MOVES = [
 
 # Define run_moves to run the provided moves and set SCORE after restart
 def run_moves(player, moves):
-    global SCORE, KILLED
+    global SCORE, KILLED, POSITION
     KILLED = False
     while True:
         clock.tick(FPS)
@@ -378,7 +365,27 @@ def run_moves(player, moves):
             SCORE = player.fitness_score  # Set the global SCORE on restart
             player.restart()
             break
-    return True
+    # print(f'path: {player.moves}, score: {SCORE}') 
+    return (player.moves, SCORE, POSITION)
+
+def remove_suboptimal_paths(valid_paths):
+    # find the path with the highest score, remove all paths with lower scores
+    scores = [path[1] for path in valid_paths]
+    max_score = max(scores)
+    print(f'max_score: {max_score}')
+
+    #save all the paths (valid_paths[i][0]) with the highest score in a new list
+    best_paths = [valid_paths[i][0] for i in range(len(valid_paths)) if valid_paths[i][1] == max_score]
+    print(f'best_paths: {best_paths}')
+    new_queue = deque()
+    new_valid_paths = []
+    for path in best_paths:
+        current_path = path[:-1]
+        # print(f'current_path: {current_path}')
+        for move in POSSIBLE_MOVES:
+            new_path = current_path + [move] + ['restart']
+            new_queue.append(new_path)
+    return new_queue
 
 # BFS to explore move lists and find optimal path
 def bfs_optimal_path(player):
@@ -386,6 +393,8 @@ def bfs_optimal_path(player):
     queue = deque()
     best_score = -1
     best_path = []
+    valid_paths = []
+    idx = 0
     
     # Start BFS with initial empty path
     initial_path = []
@@ -400,7 +409,8 @@ def bfs_optimal_path(player):
         moves_to_run = current_path + ['restart']
 
         # Run the moves and get the score
-        if not run_moves(player, moves_to_run):
+        result = run_moves(player, moves_to_run)
+        if not result:
             break  # Exit if the window is closed
 
         # Calculate minimum score threshold based on path length
@@ -411,12 +421,30 @@ def bfs_optimal_path(player):
                 best_score = SCORE
                 best_path = current_path
 
+            # # if the current path is longer than the last valid path, call the remove_suboptimal_paths function
+            # if len(valid_paths) > 1 and len(current_path) + 1 > len(valid_paths[-1][0]):
+            #     print(f'lenght changed, current path: {current_path}, last path saved: {valid_paths[-1][0]}')
+            #     queue = remove_suboptimal_paths(valid_paths)
+            #     print(f'queue len after removing suboptimal paths: {len(queue)}, last element: {queue[-1]}')
+            #     valid_paths = []
+            # else:
+            #     #that five lines below
+
+            valid_paths.append(result)
             # Generate new paths by appending each possible move
             for move in POSSIBLE_MOVES:
                 new_path = current_path + [move]
                 queue.append(new_path)
         else:
-            print(f"Pruning path with length {path_length} and score {SCORE} (threshold {threshold_score})")
+            # print(f"Pruning path with length {path_length} and score {SCORE} (threshold {threshold_score})")
+            pass
+
+        idx += 1
+        if idx % 1000 == 0:
+            print(f"Processed {idx} paths, {len(valid_paths)} valid, {len(queue)} remaining")
+            print(f'last checked path: {current_path}, score: {SCORE}')
+            print(f'\n valid_paths len: {len(valid_paths)}, \n last valid path: {valid_paths[-1][0]}\n, Best Path: {best_path}, Best Score: {best_score}')
+
 
     print(f"Best Path: {best_path}")
     print(f"Best Score: {best_score}")

@@ -1,0 +1,6 @@
+Processed 25000 paths, 2823 valid, 59691 remaining
+last checked path: [(1, 1.85), (1, 2.05), (1, 2.25), (-1, 1.85), (1, 1.05)], score: 0
+
+ valid_paths len: 2823,
+ last valid path: [(1, 1.85), (1, 2.05), (1, 2.25), (0, 1.65), (0, 2.45), 'restart'],
+ Best Path: [(1, 1.45), (1, 2.45), (1, 2.45), (0, 2.45), (-1, 1.65)], Best Score: 882
