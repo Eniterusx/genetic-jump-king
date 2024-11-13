@@ -1,6 +1,13 @@
-Processed 25000 paths, 2823 valid, 59691 remaining
-last checked path: [(1, 1.85), (1, 2.05), (1, 2.25), (-1, 1.85), (1, 1.05)], score: 0
+Processed 55000 paths, 6497 valid, 139911 remaining
+last checked path: [(1, 1.45), (1, 2.05), (1, 2.45), (0, 2.45), (-1, 2.45), (1, 1.05)], score: 880
 
- valid_paths len: 2823,
- last valid path: [(1, 1.85), (1, 2.05), (1, 2.25), (0, 1.65), (0, 2.45), 'restart'],
- Best Path: [(1, 1.45), (1, 2.45), (1, 2.45), (0, 2.45), (-1, 1.65)], Best Score: 882
+ valid_paths len: 6497,
+ last valid path: [(1, 1.45), (1, 2.05), (1, 2.45), (0, 2.45), (-1, 2.45), (1, 1.05), 'restart']
+, Best Path: [(1, 1.25), (1, 2.45), (1, 2.45), (0, 2.45), (-1, 2.05), (-1, 2.05)], Best Score: 1169
+
+
+
+
+
+best path of lenght 5:
+Best Path: [(1, 1.45), (1, 2.45), (1, 2.45), (0, 2.45), (-1, 1.65)], Best Score: 882
