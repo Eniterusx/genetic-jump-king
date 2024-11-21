@@ -1,8 +1,9 @@
-import pygame
-import skimage
 import math
 import time
-from collections import deque # Import deque from collections module
+from collections import deque  # Import deque from collections module
+
+import pygame
+import skimage
 
 pygame.init()
 
@@ -365,7 +366,7 @@ def run_moves(player, moves):
             SCORE = player.fitness_score  # Set the global SCORE on restart
             player.restart()
             break
-    # print(f'path: {player.moves}, score: {SCORE}') 
+    # print(f'path: {player.moves}, score: {SCORE}')
     return (player.moves, SCORE, POSITION)
 
 def remove_suboptimal_paths(valid_paths):
@@ -397,7 +398,7 @@ def bfs_optimal_path(player):
     idx = 0
     
     # Start BFS with initial empty path
-    initial_path = []
+    initial_path = [(1, 1.45), (1, 2.45), (1, 2.45), (0, 2.45), (-1, 2.05), (-1, 1.05), (-1, 2.25), (0, 1.65), (-1, 2.45), (1, 2.05), (1, 2.45), (1, 1.05), (1, 1.65), (-1, 1.45)]
     queue.append(initial_path)
 
     while queue:
@@ -456,7 +457,7 @@ def get_threshold_score(path_length):
     return 150 * path_length - sum(range(1, path_length + 1))
 # Initialize and run the game
 def main():
-    player = extract_map("map.png")  
+    player = extract_map("map.png")
 
     # Run BFS to find the optimal path
     best_path = bfs_optimal_path(player)

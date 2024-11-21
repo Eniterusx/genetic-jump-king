@@ -1,8 +1,10 @@
+import gc
+import math
+
 import pygame
 import skimage
-import math
-import gc
-from agents import reproduce, populate
+
+from agents import populate, reproduce
 
 pygame.init()
 
@@ -329,7 +331,7 @@ run = True
 def main():
     agents_filename = None
     fitness_filename = None
-    # agents_filename, fitness_filename = "agents_best.txt", "fitness_best.txt"
+    agents_filename = "agents_best.txt"
     agents = populate(agents_filename)
     player = extract_map("map.png")
 
