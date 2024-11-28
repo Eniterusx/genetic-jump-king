@@ -338,6 +338,7 @@ def main():
         clock.tick(FPS)
 
         for event in pygame.event.get():
+            print(player.rectangle.topleft)
             if event.type == pygame.QUIT:
                 run = False
         player.update()

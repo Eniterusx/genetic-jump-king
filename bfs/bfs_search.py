@@ -4,6 +4,7 @@ from collections import deque  # Import deque from collections module
 
 import pygame
 import skimage
+import os
 
 pygame.init()
 
@@ -271,7 +272,10 @@ def extract_map(image_path):
                 kill_rects.append(rect)
             # Parse player
             elif all(pixel == GREEN) and player_spawn is None:
+
+                # Overwrite the player spawn with the last one found
                 player_spawn = [x, y]
+                # player_spawn = STARTING_POS
             # Parse platforms
             elif all(pixel == BROWN):
                 rect = pygame.Rect(x, y, 1, 1)
@@ -351,22 +355,48 @@ POSSIBLE_MOVES = [
 ]
 
 # Define run_moves to run the provided moves and set SCORE after restart
-def run_moves(player, moves):
+def run_moves(player, moves, output=False):
+    start_time = time.time()
     global SCORE, KILLED, POSITION
     KILLED = False
+    old_position = player.rectangle.topleft
+
+    if output:
+        os.makedirs('output', exist_ok=True)
+        results = []
+
     while True:
         clock.tick(FPS)
         player.moves = moves
+
+
+        if old_position != player.rectangle.topleft:
+            print(f'position: {player.rectangle.topleft}, score: {player.fitness_score}')
+            if output:
+                results.append((player.rectangle.topleft, player.fitness_score))
+            
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
 
+        old_position = player.rectangle.topleft
         player.update()
+
         if player.restarting:
             SCORE = player.fitness_score  # Set the global SCORE on restart
             player.restart()
             break
+
+        # if 10 seconds have passed, break the loop
+        if time.time() - start_time > 10:
+            break
     # print(f'path: {player.moves}, score: {SCORE}')
+
+    if output:
+        # Save the results to a file
+        with open('output/output.txt', 'w') as f:
+            for result in results:
+                f.write(f'{result}\n')
     return (player.moves, SCORE, POSITION)
 
 def remove_suboptimal_paths(valid_paths):
@@ -393,12 +423,14 @@ def bfs_optimal_path(player):
     global SCORE
     queue = deque()
     best_score = -1
+    best_position = (0, 0)
     best_path = []
     valid_paths = []
     idx = 0
     
     # Start BFS with initial empty path
-    initial_path = [(1, 1.45), (1, 2.45), (1, 2.45), (0, 2.45), (-1, 2.05), (-1, 1.05), (-1, 2.25), (0, 1.65), (-1, 2.45), (1, 2.05), (1, 2.45), (1, 1.05), (1, 1.65), (-1, 1.45)]
+    # initial_path = [(1, 1.45), (1, 2.45), (1, 2.45), (0, 2.45), (-1, 2.05), (-1, 1.05), (-1, 2.25), (0, 1.65), (-1, 2.45), (1, 2.05), (1, 2.45), (1, 1.05), (1, 1.65), (-1, 1.45), (-1, 0.65), (1, 1.45), (1, 1.45), (1, 1.05), (0, 2.45), (1, 2.25), (1, 0.65), (1, 1.05), (1, 1.05), (1, 0.85), (1, 0.65), (1, 2.45), (0, 2.45), (1, 2.45), (1, 1.25), (0, 2.45), (1, 2.45), (1, 1.05), (1, 1.45), (-1, 0.65), (-1, 1.85), (-1, 1.85), (-1, 1.85), (-1, 1.85), (1, 1.45), (-1, 1.45), (-1, 1.45) (-1, 1.65), (1, 1.65), (-1, 1.85), (1, 1.65), (-1, 1.85), (-1, 0.65), (-1, 0.85), (-1, 0.85), || (1, 1.05), (1, 2.25), (1, 1.85), (1, 0.65), (1, 2.45), (-1, 2.05), (-1, 2.45), (1, 1.45), (1, 1.65)]  -> (226, 150)
+    initial_path = []
     queue.append(initial_path)
 
     while queue:
@@ -411,6 +443,7 @@ def bfs_optimal_path(player):
 
         # Run the moves and get the score
         result = run_moves(player, moves_to_run)
+        # print(f'result: {result[2]}')
         if not result:
             break  # Exit if the window is closed
 
@@ -421,6 +454,7 @@ def bfs_optimal_path(player):
             if SCORE > best_score:
                 best_score = SCORE
                 best_path = current_path
+                best_position = POSITION
 
             # # if the current path is longer than the last valid path, call the remove_suboptimal_paths function
             # if len(valid_paths) > 1 and len(current_path) + 1 > len(valid_paths[-1][0]):
@@ -444,7 +478,7 @@ def bfs_optimal_path(player):
         if idx % 1000 == 0:
             print(f"Processed {idx} paths, {len(valid_paths)} valid, {len(queue)} remaining")
             print(f'last checked path: {current_path}, score: {SCORE}')
-            print(f'\n valid_paths len: {len(valid_paths)}, \n last valid path: {valid_paths[-1][0]}\n, Best Path: {best_path}, Best Score: {best_score}')
+            print(f'\n valid_paths len: {len(valid_paths)}, \n last valid path: {valid_paths[-1][0]}\n, Best Path: {best_path}, Best Score: {best_score}, Best Position: {best_position}')
 
 
     print(f"Best Path: {best_path}")
@@ -454,17 +488,42 @@ def bfs_optimal_path(player):
 def get_threshold_score(path_length):
     # Threshold score is the minimum score needed to reach the goal
      # 150 * path_length - 1 - 2 - 3 - ... - path_length
+     
+    if path_length == 3:
+        return 800
+    elif path_length > 3:
+        return 150 * path_length - sum(range(1, path_length + 1)) + 100
+    
     return 150 * path_length - sum(range(1, path_length + 1))
-# Initialize and run the game
-def main():
-    player = extract_map("map.png")
+    # return -1
 
+
+# Initialize and run the game
+# STARTING_POS = [226,150]
+def main():
+    victory_path = [
+(1, 1.45), (1, 2.45), (1, 2.45), (0, 2.45), (-1, 2.05),
+(-1, 1.05), (-1, 2.25), (0, 1.65), (-1, 2.45), (1, 2.05), 
+(1, 2.45), (1, 1.05), (1, 1.65), (-1, 1.45), (-1, 0.65), 
+(1, 1.45), (1, 1.45), (0, 2.45), (1, 2.25), 
+(1, 0.65), (1, 1.05), (1, 1.05), (1, 0.85), (1, 0.65), 
+(1, 2.45), (0, 2.45), (1, 2.45), (1, 1.25), (0, 2.45), 
+(1, 2.45), (1, 1.05), (1, 1.45), (-1, 0.65), (-1, 1.85), 
+(-1, 1.85), (-1, 1.85), (-1, 1.85), (1, 1.45), (-1, 1.45), 
+(-1, 1.45), (-1, 1.65), (1, 1.65), (-1, 1.85), (1, 1.65), 
+(-1, 1.85), (-1, 0.65), (-1, 0.85), (-1, 0.85), (1, 1.05), 
+(1, 2.25), (1, 1.85), (1, 0.65), (1, 2.45), (-1, 2.05), 
+(-1, 2.45), (1, 1.45), (1, 1.65)]
+    player = extract_map("map.png")
+    # player.starting_pos = STARTING_POS
     # Run BFS to find the optimal path
-    best_path = bfs_optimal_path(player)
+    # best_path = bfs_optimal_path(player)
+
+    run_moves(player, victory_path, output=True)
 
     # Assign best path to player and display final run
-    player.moves = best_path + ['restart']  # Add restart at the end to complete the path
-    run_moves(player, player.moves)
+    # player.moves = best_path + ['restart']  # Add restart at the end to complete the path
+    # run_moves(player, player.moves)
 
     pygame.quit()
 
