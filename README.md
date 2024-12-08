@@ -35,15 +35,25 @@ W każdej iteracji algorytmu, agent jest oceniany na podstawie tego, jak daleko 
 - Punkty kontrolne (kolor niebieski): Są to punkty, które agent musi odwiedzić, aby zostać nagrodzonym. Punkty rozmieszczone są blisko siebie, oraz rozmieszczone są w takich sposób, aby nie było możliwe ich ominięcie. Agent jest nagradzany za każdy punkt kontrolny, który odwiedził. Nagroda za punkt kontrolny jest zależna od tego, w jakiej ilości skoków agent go odwiedził. Im mniej skoków, tym większa nagroda.
 
 ### Wyniki
-Agentom udało się nauczyć pokonywać trasę. Poniżej przedstawiamy wyniki agenta po 520 generacjach. Lewy wykres przedstawia średni fitness wszystkich osobników w danej generacji. Prawy wykres przedstawia najlepszy osiągnięty wynik we wszystkich generacjach.
+Agentom udało się nauczyć pokonywać trasę. Czas potrzebny na nauczenie agenta genetycznego wynosił około 2.5 godziny. Najniższa liczba skoków, w którą udało się agentowi pokonać trasę, wynosi 72. Poniżej przedstawiamy wyniki agenta po 520 generacjach.  Lewy wykres przedstawia średni fitness wszystkich osobników w danej generacji. Prawy wykres przedstawia najlepszy osiągnięty wynik we wszystkich generacjach.
 ![Krzywa uczenia](learning_curve.png)
 
 Na lewym wykresie wyraźnie widoczny jest drastyczny spadek średniego fitnessu w okolicach 300 generacji. Prawdopodobnie wynika to z niekorzystnych mutacji większości agentów w danej generacji. Problem ten potencjalnie dałoby się rozwiązać zwiększając liczbę osobników w populacji. Mimo tego, agentom szybko udało się ponownie osiągnąć wysoki poziom fitnessu. 
 
 Niestety nie możemy porównać naszego wyniku z wynikami innych autorów, jako, że nasze środowisko jest unikalne. Podobny problem jednak został poruszony w artykule [Hybrid of Rule-based Systems Using Genetic Algorithm to Improve Platform Game Performance](https://www.researchgate.net/publication/275067821_Hybrid_of_Rule-based_Systems_Using_Genetic_Algorithm_to_Improve_Platform_Game_Performance), gdzie autorzy również wykorzystali algorytmy genetyczne do nauczenia agenta poruszania się po planszy w grze platformowej.
 
+### Wynik optymalny
+Wynik agenta został porównany z wynikiem optymalnym. Wynik agenta wynosi 72 skoki, tymczasem wynik optymalny wynosi 56 skoków. W celu znalezienia optymalnego wyniku, potrzebne było około 10 godzin.
+
 ### Wnioski
-Pomimo niewielkich zastojów w nauczaniu od czasu do czasu, agent ostatecznie znajduje dalszą drogę. Agent jest w stanie nauczyć się pokonywać trasę oraz znajduje wynik zbliżony do optymalnego. Warto pamiętać, że agent nie posiada żadnej wiedzy na temat środowiska, w którym się porusza. Wszystko, co wie, wynika z ewolucji. Nie potrafi więc generalizować swojej wiedzy na inne środowiska.  
+Pomimo niewielkich zastojów w nauczaniu od czasu do czasu, agent ostatecznie znajduje dalszą drogę. Agent jest w stanie nauczyć się pokonywać trasę oraz znajduje wynik zbliżony do optymalnego. Warto pamiętać, że agent nie posiada żadnej wiedzy na temat środowiska, w którym się porusza. Wszystko, co wie, wynika z ewolucji. Nie potrafi więc generalizować swojej wiedzy na inne środowiska.
+
+Agent prawidłowo uczy się pokonywać trasę. Nie jest w prawdzie optymalny, ale odbiega od optymalnego wyniku tylko o ~22%. Jest wystarczająco dobry, gdy celem jest tylko znalezienie jakiegokolwiek rozwiązania. 
+Główną zaletą algorytmu jest jego czas i łatwość działania. Znalezienie optymalnego wyniku wymagało czterokrotnie większego nakładu czasu oraz okresowej kontroli, a także ręcznego połączenia ścieżek wynikowych. W przypadku algorytmu genetycznego wystarczyło uruchomienie programu i oczekiwanie na końcowe rezultaty.
+
+Opracowany przez nas system potrafi rozwiązywać problemy bez konieczności posiadania szczegółowej wiedzy na ich temat.
+Dzięki zastosowaniu elementów algorytmu genetycznego, odpowiadającego za wybór ruchów agenta, system uczy się zasad i zawiłości potrzebnych do skutecznej nawigacji w danym środowisku. W efekcie osiąga wyznaczony cel w czasie znacznie krótszym niż przy użyciu tradycyjnych metod.
+Proponujemy zastosowanie tego algorytmu w szerszym kontekście jako narzędzia do rozwiązywania różnorodnych problemów. Jeśli dany problem można sprowadzić do zestawu zasad, decyzji, ograniczeń i celu oraz możliwe jest odwzorowanie go na dwuwymiarową mapę, to algorytm byłby w stanie go rozwiązać. Agent, analizując każdy ruch, dąży do osiągnięcia celu przy jak najmniejszej liczbie kroków, co prowadzi do skutecznego znalezienia rozwiązania.
 
 ### Kompilacja
 Wymagania:
@@ -82,3 +92,4 @@ https://medium.com/@Data_Aficionado_1083/genetic-algorithms-optimizing-success-t
 https://www.whitman.edu/Documents/Academics/Mathematics/2014/carrjk.pdf) Dostęp: 2024-09-10
 4. [Hybrid of Rule-based Systems Using Genetic Algorithm to Improve Platform Game Performance](
 https://www.researchgate.net/publication/275067821_Hybrid_of_Rule-based_Systems_Using_Genetic_Algorithm_to_Improve_Platform_Game_Performance) Dostęp: 2024-09-10
+5. [Building a Game-Playing Agent for CoinTex Using the Genetic Algorithm](https://www.researchgate.net/publication/344347559_Building_a_Game-Playing_Agent_for_CoinTex_Using_the_Genetic_Algorithm) Dostęp: 2024-09-10
