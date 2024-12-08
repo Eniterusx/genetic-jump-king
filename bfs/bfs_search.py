@@ -1,3 +1,4 @@
+import copy
 import math
 import time
 from collections import deque  # Import deque from collections module
@@ -61,6 +62,14 @@ class FitnessRectangle(pygame.sprite.Sprite):
     def add_point(self, point):
         self.points.append(point)
 
+    def copy(self):
+        new_fr = FitnessRectangle()
+        new_fr.image = self.image
+        new_fr.image.fill(TEAL)
+        new_fr.rectangle = self.rectangle
+        new_fr.rectangle.topleft = (0, 0)
+        return new_fr
+
     def create_rectangle(self):
         if len(self.points) == 0:
             return
@@ -76,7 +85,7 @@ class FitnessRectangle(pygame.sprite.Sprite):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, starting_pos, walls, fitness_walls, killing_walls, platforms, moves=None):
+    def __init__(self, starting_pos = (0, 0), walls = [], fitness_walls = [], killing_walls = [], platforms = [], moves=None):
         super().__init__()
         self.image = pygame.Surface((PLAYER_SIZE[0], PLAYER_SIZE[1]))
         self.image.fill(GREEN)
@@ -110,6 +119,60 @@ class Player(pygame.sprite.Sprite):
         # New attributes for predefined moves
         self.moves = moves if moves is not None else []  # List of (direction, jump_power)
         self.move_index = 0  # Tracks the current move index
+
+    def set_pos(self, position):
+        self.starting_pos = position
+        self.rectangle = self.image.get_rect()
+        self.rectangle.topleft = position
+
+    def extract_map(self, image_path):
+        wall_rects = []
+        kill_rects = []
+        fitness_rects = []
+        platform_rects = []
+        player_spawn = None
+        image = skimage.io.imread(image_path)
+        for y in range(len(image)):
+            for x in range(len(image[y])):
+                pixel = image[y][x][:3]
+                # Parse walls
+                if all(pixel == BLACK):
+                    # skimage uses y,x but pygame uses x,y
+                    rect = pygame.Rect(x, y, 1, 1)
+                    wall_rects.append(rect)
+                # Parse killbricks
+                elif all(pixel == RED):
+                    rect = pygame.Rect(x, y, 1, 1)
+                    kill_rects.append(rect)
+                # Parse player
+                elif all(pixel == GREEN) and player_spawn is None:
+                    player_spawn = [x, y]
+                # Parse platforms
+                elif all(pixel == BROWN):
+                    rect = pygame.Rect(x, y, 1, 1)
+                    platform_rects.append(rect)
+                # Parse fitness points
+                elif all(pixel == TEAL):
+                    found = False
+                    for rectangle in fitness_rects:
+                        if check_neighbours((x, y), rectangle.points):
+                            rectangle.add_point((x, y))
+                            found = True
+                            break
+                    if not found:
+                        new_rect = FitnessRectangle()
+                        new_rect.add_point((x, y))
+                        fitness_rects.append(new_rect)
+        for rectangle in fitness_rects:
+            rectangle.create_rectangle()
+        if player_spawn is None:
+            raise Exception("Player not declared in the map")
+            
+        self.set_pos(player_spawn)
+        self.walls = wall_rects
+        self.fitness_walls = fitness_rects
+        self.killing_walls = kill_rects
+        self.platforms = platform_rects
 
     def handle_key_presses(self):
         # Only jump if on the ground and moves remain
@@ -249,53 +312,6 @@ def check_neighbours(pixel_cords, neighbour_list):
             return True
     return False
 
-
-def extract_map(image_path):
-    wall_rects = []
-    kill_rects = []
-    fitness_rects = []
-    platform_rects = []
-    player_spawn = None
-    image = skimage.io.imread(image_path)
-    for y in range(len(image)):
-        for x in range(len(image[y])):
-            pixel = image[y][x][:3]
-            # Parse walls
-            if all(pixel == BLACK):
-                # skimage uses y,x but pygame uses x,y
-                rect = pygame.Rect(x, y, 1, 1)
-                wall_rects.append(rect)
-            # Parse killbricks
-            elif all(pixel == RED):
-                rect = pygame.Rect(x, y, 1, 1)
-                kill_rects.append(rect)
-            # Parse player
-            elif all(pixel == GREEN) and player_spawn is None:
-                player_spawn = [x, y]
-            # Parse platforms
-            elif all(pixel == BROWN):
-                rect = pygame.Rect(x, y, 1, 1)
-                platform_rects.append(rect)
-            # Parse fitness points
-            elif all(pixel == TEAL):
-                found = False
-                for rectangle in fitness_rects:
-                    if check_neighbours((x, y), rectangle.points):
-                        rectangle.add_point((x, y))
-                        found = True
-                        break
-                if not found:
-                    new_rect = FitnessRectangle()
-                    new_rect.add_point((x, y))
-                    fitness_rects.append(new_rect)
-    for rectangle in fitness_rects:
-        rectangle.create_rectangle()
-    if player_spawn is None:
-        raise Exception("Player not declared in the map")
-    player = Player(player_spawn, wall_rects, fitness_rects, kill_rects, platform_rects)
-    return player
-
-
 def draw_walls(walls, color):
     for wall in walls:
         if wall.width == 1 and wall.height == 1:
@@ -354,6 +370,7 @@ POSSIBLE_MOVES = [
 def run_moves(player, moves):
     global SCORE, KILLED, POSITION
     KILLED = False
+    fitness_walls_after_run = []
     while True:
         clock.tick(FPS)
         player.moves = moves
@@ -363,11 +380,12 @@ def run_moves(player, moves):
 
         player.update()
         if player.restarting:
+            fitness_walls_after_run = [f_wall.copy() for f_wall in player.fitness_walls]
             SCORE = player.fitness_score  # Set the global SCORE on restart
             player.restart()
             break
     # print(f'path: {player.moves}, score: {SCORE}')
-    return (player.moves, SCORE, POSITION)
+    return (player.moves, SCORE, POSITION, fitness_walls_after_run)
 
 def remove_suboptimal_paths(valid_paths):
     # find the path with the highest score, remove all paths with lower scores
@@ -388,6 +406,16 @@ def remove_suboptimal_paths(valid_paths):
             new_queue.append(new_path)
     return new_queue
 
+def start_path(initial_path) -> tuple:
+    dummy_player: Player = Player()
+    dummy_player.extract_map("map.png")
+
+    results = run_moves(dummy_player, initial_path + ['restart'])
+    start_pos = results[2]
+    start_fitness_walls = results[3]
+
+    return (start_pos, start_fitness_walls)
+
 # BFS to explore move lists and find optimal path
 def bfs_optimal_path(player):
     global SCORE
@@ -396,10 +424,20 @@ def bfs_optimal_path(player):
     best_path = []
     valid_paths = []
     idx = 0
-    
-    # Start BFS with initial empty path
+
     initial_path = [(1, 1.45), (1, 2.45), (1, 2.45), (0, 2.45), (-1, 2.05), (-1, 1.05), (-1, 2.25), (0, 1.65), (-1, 2.45), (1, 2.05), (1, 2.45), (1, 1.05), (1, 1.65), (-1, 1.45)]
-    queue.append(initial_path)
+
+    # Start BFS with initial empty path
+    queue.append([])
+
+    player.extract_map("map.png")
+    if len(initial_path):
+        start_pos, start_fitness_walls = start_path(initial_path)
+        player.original_fitness_walls = start_fitness_walls
+        player.fitness_walls = start_fitness_walls.copy()
+        player.set_pos(start_pos)
+
+    # DO TEJ PORY WSZYSTKO JEST GIT, ale z jakiegoś powodu nie działa (ew. 426 i 430...?)
 
     while queue:
         # Get the next path from the queue
@@ -431,7 +469,7 @@ def bfs_optimal_path(player):
             # else:
             #     #that five lines below
 
-            valid_paths.append(result)
+            valid_paths.append(result[:3])
             # Generate new paths by appending each possible move
             for move in POSSIBLE_MOVES:
                 new_path = current_path + [move]
@@ -439,7 +477,6 @@ def bfs_optimal_path(player):
         else:
             # print(f"Pruning path with length {path_length} and score {SCORE} (threshold {threshold_score})")
             pass
-
         idx += 1
         if idx % 1000 == 0:
             print(f"Processed {idx} paths, {len(valid_paths)} valid, {len(queue)} remaining")
@@ -457,7 +494,7 @@ def get_threshold_score(path_length):
     return 150 * path_length - sum(range(1, path_length + 1))
 # Initialize and run the game
 def main():
-    player = extract_map("map.png")
+    player = Player()
 
     # Run BFS to find the optimal path
     best_path = bfs_optimal_path(player)
